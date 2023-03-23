@@ -10,7 +10,7 @@ import android.os.StrictMode
 import android.provider.MediaStore
 import android.util.Base64
 import android.util.Log
-import android.widget.Button
+
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import com.android.volley.Request
@@ -23,6 +23,9 @@ import java.security.SecureRandom
 import java.security.cert.X509Certificate
 import javax.net.ssl.*
 class MainActivity : AppCompatActivity() {
+    //Enrutador
+
+
     private var imageUrl: String? = null
 
     private lateinit var Binding:ActivityMainBinding
@@ -41,11 +44,10 @@ class MainActivity : AppCompatActivity() {
 
 
         // Agregar un listener al botón para generar una imagen aleatoria al hacer clic
-        val generateButton: Button = findViewById(R.id.button_generate)
-        generateButton.setOnClickListener { generarImagenAleatoria() }
+        Binding.GenerarI.setOnClickListener { generarImagenAleatoria()  }
 
 
-        Binding.buttonDownload.setOnClickListener {
+            Binding.Descargar.setOnClickListener {
 
             val bitmap = (Binding.imageView.drawable as? BitmapDrawable)?.bitmap
             if (bitmap != null) {
@@ -70,8 +72,7 @@ class MainActivity : AppCompatActivity() {
         val queue = Volley.newRequestQueue(this)
 
         //Crea una solicitud de objeto JSON (JsonObjectRequest) que utiliza el método HTTP GET
-        val request = JsonObjectRequest(
-            Request.Method.GET, url, null,
+        val request = JsonObjectRequest(Request.Method.GET, url, null,
             { response ->
 
                 if (response.has("message")) {
@@ -87,7 +88,7 @@ class MainActivity : AppCompatActivity() {
                         val messageObject = JSONObject(message)
                         if (messageObject.has("data")) {
                             imageUrl = messageObject.getString("data")
-                            // Resto del código para procesar la respuesta JSON
+
                         } else {
                             Log.e("Volley", "La clave 'data' no está presente en la respuesta JSON")
                         }
@@ -108,21 +109,40 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun guardarImagen(bitmap: Bitmap) {
+
+
         val filename = "imagen_descargada.png"
         val mimeType = "image/png"
+
+
+
+        //Se crea un objeto ContentValues que se utilizará para almacenar los valores de metadatos de la imagen en la galería de imágenes.
         val contentValues = ContentValues().apply {
             put(MediaStore.Images.Media.DISPLAY_NAME, filename)
             put(MediaStore.Images.Media.MIME_TYPE, mimeType)
         }
+
+        //ContentResolver que se utilizará para realizar operaciones de acceso
+        // y manipulación de contenido en la aplicación y se define una variable Uri nula.
         val resolver = contentResolver
         var uri: Uri? = null
+
+
+
+        //Se obtiene la Uri de la colección de imágenes en la galería de imágenes externa principal
+        // y se inserta un nuevo registro en la galería de imágenes
         try {
             val collection = MediaStore.Images.Media.getContentUri(MediaStore.VOLUME_EXTERNAL_PRIMARY)
             uri = resolver.insert(collection, contentValues)
             if (uri == null) {
                 throw IOException("Failed to create new MediaStore record.")
             }
-            resolver.openOutputStream(uri).use { outputStream ->
+
+
+            //Se abre un flujo de salida en la Uri y se comprime el objeto Bitmap en formato PNG y se escribe en el flujo de salida.
+            resolver.openOutputStream(uri).use {
+
+                    outputStream ->
                 if (!bitmap.compress(Bitmap.CompressFormat.PNG, 100, outputStream)) {
                     throw IOException("Failed to save bitmap.")
                 }
@@ -143,7 +163,8 @@ class MainActivity : AppCompatActivity() {
 
 
     private fun configureSSL(): SSLSocketFactory? {
-        val trustAllCerts = arrayOf<TrustManager>(object : X509TrustManager {
+        val trustAllCerts = arrayOf<TrustManager>(@SuppressLint("CustomX509TrustManager")
+        object : X509TrustManager {
             @SuppressLint("TrustAllX509TrustManager")
             override fun checkClientTrusted(chain: Array<out X509Certificate>?, authType: String?) {}
             @SuppressLint("TrustAllX509TrustManager")
