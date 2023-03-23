@@ -1,40 +1,39 @@
 package com.example.api2
-
-
-import java.security.SecureRandom
-import java.security.cert.X509Certificate
+import android.annotation.SuppressLint
+import android.content.ContentValues
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
+import android.graphics.drawable.BitmapDrawable
+import android.net.Uri
 import android.os.Bundle
-import android.os.Environment
 import android.os.StrictMode
+import android.provider.MediaStore
 import android.util.Base64
 import android.util.Log
 import android.widget.Button
-import android.widget.ImageView
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import com.android.volley.Request
-import com.android.volley.VolleyLog
-import com.android.volley.toolbox.HurlStack
-import com.android.volley.toolbox.ImageRequest
 import com.android.volley.toolbox.JsonObjectRequest
 import com.android.volley.toolbox.Volley
-import com.squareup.picasso.Picasso
+import com.example.api2.databinding.ActivityMainBinding
 import org.json.JSONObject
-import java.io.File
-import java.io.FileOutputStream
+import java.io.IOException
+import java.security.SecureRandom
+import java.security.cert.X509Certificate
 import javax.net.ssl.*
-
 class MainActivity : AppCompatActivity() {
     private var imageUrl: String? = null
 
+    private lateinit var Binding:ActivityMainBinding
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        setContentView(R.layout.activity_main)
+        Binding = ActivityMainBinding.inflate(layoutInflater)
+        setContentView(Binding.root)
+
 
         configureSSL()
-
 
         // Deshabilitar la verificación de certificado SSL/TLS por completo
         val policy = StrictMode.ThreadPolicy.Builder().permitAll().build()
@@ -45,11 +44,96 @@ class MainActivity : AppCompatActivity() {
         val generateButton: Button = findViewById(R.id.button_generate)
         generateButton.setOnClickListener { generarImagenAleatoria() }
 
-        // Agregar un listener al botón para descargar la imagen actual al hacer clic
-        val downloadButton: Button = findViewById(R.id.button_download)
-        downloadButton.setOnClickListener {
-            if (imageUrl != null) {
-                descargarImagen(imageUrl!!)
+
+        Binding.buttonDownload.setOnClickListener {
+
+            val bitmap = (Binding.imageView.drawable as? BitmapDrawable)?.bitmap
+            if (bitmap != null) {
+                guardarImagen(bitmap)
+            } else {
+                Toast.makeText(this, "No hay imagen para guardar", Toast.LENGTH_SHORT).show()
+            }
+        }
+
+    }
+
+
+    private fun generarImagenAleatoria() {
+
+        //Crea una cadena que contiene la URL de la API
+        // y luego la imprime en la consola de registro (logcat) para depurar.
+        val url = "https://192.168.1.9/multimedia/enrutador.php"
+        Log.d("URL_DEBUG", "URL: $url")
+
+        //Crea una cola de solicitudes (request queue) para almacenar
+        // y administrar las solicitudes de red.
+        val queue = Volley.newRequestQueue(this)
+
+        //Crea una solicitud de objeto JSON (JsonObjectRequest) que utiliza el método HTTP GET
+        val request = JsonObjectRequest(
+            Request.Method.GET, url, null,
+            { response ->
+
+                if (response.has("message")) {
+                    val message = response.getString("message")
+
+                    if (message is String) {
+                        // Procesar la cadena como se desee
+                        val imageBytes = Base64.decode(message, Base64.DEFAULT)
+                        val decodedImage = BitmapFactory.decodeByteArray(imageBytes, 0, imageBytes.size)
+                        Binding.imageView.setImageBitmap(decodedImage)
+                    } else {
+                        // El valor de "message" es un objeto JSON
+                        val messageObject = JSONObject(message)
+                        if (messageObject.has("data")) {
+                            imageUrl = messageObject.getString("data")
+                            // Resto del código para procesar la respuesta JSON
+                        } else {
+                            Log.e("Volley", "La clave 'data' no está presente en la respuesta JSON")
+                        }
+                    }
+                } else {
+                    Log.e("Volley", "La clave 'message' no está presente en la respuesta JSON")
+                }
+            },
+
+            //Manejo de errores de volley
+            { error ->
+                Log.e("Volley", error.toString())
+            })
+
+        //Se agrega la solicitud a la cola de solicitudes
+        request.tag = "API_REQUEST_TAG"
+        queue.add(request)
+    }
+
+    private fun guardarImagen(bitmap: Bitmap) {
+        val filename = "imagen_descargada.png"
+        val mimeType = "image/png"
+        val contentValues = ContentValues().apply {
+            put(MediaStore.Images.Media.DISPLAY_NAME, filename)
+            put(MediaStore.Images.Media.MIME_TYPE, mimeType)
+        }
+        val resolver = contentResolver
+        var uri: Uri? = null
+        try {
+            val collection = MediaStore.Images.Media.getContentUri(MediaStore.VOLUME_EXTERNAL_PRIMARY)
+            uri = resolver.insert(collection, contentValues)
+            if (uri == null) {
+                throw IOException("Failed to create new MediaStore record.")
+            }
+            resolver.openOutputStream(uri).use { outputStream ->
+                if (!bitmap.compress(Bitmap.CompressFormat.PNG, 100, outputStream)) {
+                    throw IOException("Failed to save bitmap.")
+                }
+            }
+            Toast.makeText(this, "Imagen descargada con éxito", Toast.LENGTH_SHORT).show()
+        } catch (e: IOException) {
+            Log.e("GuardarImagen", e.toString())
+            Toast.makeText(this, "Error al guardar la imagen", Toast.LENGTH_SHORT).show()
+        } finally {
+            if (uri != null) {
+                resolver.notifyChange(uri, null)
             }
         }
     }
@@ -58,83 +142,11 @@ class MainActivity : AppCompatActivity() {
 
 
 
-
-    private fun generarImagenAleatoria() {
-
-        val url = "https://192.168.1.9/multimedia/enrutador.php\n"
-        Log.d("URL_DEBUG", "URL: $url")
-
-        val queue = Volley.newRequestQueue(this)
-        val request = JsonObjectRequest(
-            Request.Method.GET, url, null,
-            { response ->
-
-                val message = response.get("message")
-                if (message is String) {
-                    // Procesar la cadena como se desee
-                    Log.d("Volley", "Mensaje: $message")
-                } else {
-                    // El valor de "message" es un objeto JSON
-                    val messageObject = message as JSONObject
-                    imageUrl = messageObject.getString("data")
-                    // Resto del código para procesar la respuesta JSON
-                }
-
-
-
-
-            },
-            { error ->
-                Log.e("Volley", error.toString())
-            })
-
-        queue.add(request)
-    }
-
-    private fun descargarImagen(imageUrl: String) {
-        // Hacer una solicitud HTTP utilizando Volley para obtener la imagen
-        val queue = Volley.newRequestQueue(this)
-        val imageRequest = ImageRequest(
-            imageUrl,
-            { response ->
-                // Guardar la imagen en el almacenamiento externo
-                guardarImagen(response)
-            }, 0, 0, null, null
-        )
-
-        queue.add(imageRequest)
-    }
-
-    private fun guardarImagen(bitmap: Bitmap) {
-        // Verificar si se tiene permiso de escritura en el almacenamiento externo
-
-        // Crear un archivo en el directorio de Descargas
-        val file = File(
-            Environment.getExternalStoragePublicDirectory(
-                Environment.DIRECTORY_DOWNLOADS
-            ), "imagen_descargada.png"
-        )
-
-        try {
-            // Guardar la imagen en el archivo
-            val stream = FileOutputStream(file)
-            bitmap.compress(Bitmap.CompressFormat.PNG, 100, stream)
-            stream.flush()
-            stream.close()
-
-            // Mostrar un mensaje de éxito
-            Toast.makeText(this, "Imagen descargada con éxito", Toast.LENGTH_SHORT)
-                .show()
-        } catch (e: Exception) {
-            Log.e("GuardarImagen", e.toString())
-            Toast.makeText(this, "Error al guardar la imagen", Toast.LENGTH_SHORT)
-                .show()
-        }
-    }
-
     private fun configureSSL(): SSLSocketFactory? {
         val trustAllCerts = arrayOf<TrustManager>(object : X509TrustManager {
+            @SuppressLint("TrustAllX509TrustManager")
             override fun checkClientTrusted(chain: Array<out X509Certificate>?, authType: String?) {}
+            @SuppressLint("TrustAllX509TrustManager")
             override fun checkServerTrusted(chain: Array<out X509Certificate>?, authType: String?) {}
             override fun getAcceptedIssuers(): Array<X509Certificate> {
                 return arrayOf()
