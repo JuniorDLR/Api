@@ -1,4 +1,5 @@
 package com.example.api2
+
 import android.annotation.SuppressLint
 import android.content.ContentValues
 import android.graphics.Bitmap
@@ -22,13 +23,14 @@ import java.io.IOException
 import java.security.SecureRandom
 import java.security.cert.X509Certificate
 import javax.net.ssl.*
+
 class MainActivity : AppCompatActivity() {
-    //Enrutador
+    val junior: String = ""
 
 
     private var imageUrl: String? = null
 
-    private lateinit var Binding:ActivityMainBinding
+    private lateinit var Binding: ActivityMainBinding
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -44,10 +46,10 @@ class MainActivity : AppCompatActivity() {
 
 
         // Agregar un listener al botón para generar una imagen aleatoria al hacer clic
-        Binding.GenerarI.setOnClickListener { generarImagenAleatoria()  }
+        Binding.GenerarI.setOnClickListener { generarImagenAleatoria() }
 
 
-            Binding.Descargar.setOnClickListener {
+        Binding.Descargar.setOnClickListener {
 
             val bitmap = (Binding.imageView.drawable as? BitmapDrawable)?.bitmap
             if (bitmap != null) {
@@ -81,7 +83,8 @@ class MainActivity : AppCompatActivity() {
                     if (message is String) {
                         // Procesar la cadena como se desee
                         val imageBytes = Base64.decode(message, Base64.DEFAULT)
-                        val decodedImage = BitmapFactory.decodeByteArray(imageBytes, 0, imageBytes.size)
+                        val decodedImage =
+                            BitmapFactory.decodeByteArray(imageBytes, 0, imageBytes.size)
                         Binding.imageView.setImageBitmap(decodedImage)
                     } else {
                         // El valor de "message" es un objeto JSON
@@ -115,7 +118,6 @@ class MainActivity : AppCompatActivity() {
         val mimeType = "image/png"
 
 
-
         //Se crea un objeto ContentValues que se utilizará para almacenar los valores de metadatos de la imagen en la galería de imágenes.
         val contentValues = ContentValues().apply {
             put(MediaStore.Images.Media.DISPLAY_NAME, filename)
@@ -128,11 +130,11 @@ class MainActivity : AppCompatActivity() {
         var uri: Uri? = null
 
 
-
         //Se obtiene la Uri de la colección de imágenes en la galería de imágenes externa principal
         // y se inserta un nuevo registro en la galería de imágenes
         try {
-            val collection = MediaStore.Images.Media.getContentUri(MediaStore.VOLUME_EXTERNAL_PRIMARY)
+            val collection =
+                MediaStore.Images.Media.getContentUri(MediaStore.VOLUME_EXTERNAL_PRIMARY)
             uri = resolver.insert(collection, contentValues)
             if (uri == null) {
                 throw IOException("Failed to create new MediaStore record.")
@@ -159,16 +161,23 @@ class MainActivity : AppCompatActivity() {
     }
 
 
-
-
-
     private fun configureSSL(): SSLSocketFactory? {
         val trustAllCerts = arrayOf<TrustManager>(@SuppressLint("CustomX509TrustManager")
         object : X509TrustManager {
             @SuppressLint("TrustAllX509TrustManager")
-            override fun checkClientTrusted(chain: Array<out X509Certificate>?, authType: String?) {}
+            override fun checkClientTrusted(
+                chain: Array<out X509Certificate>?,
+                authType: String?
+            ) {
+            }
+
             @SuppressLint("TrustAllX509TrustManager")
-            override fun checkServerTrusted(chain: Array<out X509Certificate>?, authType: String?) {}
+            override fun checkServerTrusted(
+                chain: Array<out X509Certificate>?,
+                authType: String?
+            ) {
+            }
+
             override fun getAcceptedIssuers(): Array<X509Certificate> {
                 return arrayOf()
             }
@@ -187,11 +196,6 @@ class MainActivity : AppCompatActivity() {
 
 
     }
-
-
-
-
-
 
 
 }
