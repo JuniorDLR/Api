@@ -26,6 +26,10 @@ import javax.net.ssl.*
 
 class MainActivity : AppCompatActivity() {
     val junior: String = ""
+    val axel: String = ""
+    val axel: String = ""
+    val axel: String = ""
+    val axel: String = ""
 
 
     private var imageUrl: String? = null
