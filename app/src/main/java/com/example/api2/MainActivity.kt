@@ -30,6 +30,8 @@ class MainActivity : AppCompatActivity() {
     val axel: String = ""
     val axel: String = ""
     val axel: String = ""
+    val axel: String = ""
+    val axel: String = ""  val axel: String = ""  val axel: String = ""
 
 
     private var imageUrl: String? = null
